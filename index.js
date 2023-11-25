@@ -1,4 +1,4 @@
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require("express")
 const cors = require('cors');
 const app = express()
@@ -43,23 +43,53 @@ async function run() {
 
 
         // add user during registration and google login------------------------->>>>>
-        app.put('/users',async(req,res)=>{
+        app.put('/users', async (req, res) => {
             const data = req.body;
-            const query = {email : data.email}
+            const query = { email: data.email }
             const isExist = await usersCollection.findOne(query);
-            if(isExist){
-                res.send({status : 1})
-            }else{
+            if (isExist) {
+                res.send({ status: 1 })
+            } else {
                 const result = await usersCollection.insertOne(data)
                 res.send(result)
             }
         })
 
         // get all users api----------------------------------------------------->>>>>
-        app.get('/users',async(req,res)=>{
+        app.get('/users', async (req, res) => {
             const result = await usersCollection.find({}).toArray()
             res.send(result)
         })
+
+        // ====================================== A D M I N ====================================
+
+        // make admin API-------------------------------------------------------->>>>>
+        app.patch('/user/admin/:sid', async (req, res) => {
+            const id = req.params.sid;
+            const filter = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    role: 'admin'
+                }
+            }
+            const result = await usersCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        })
+
+        // make premium API-------------------------------------------------------->>>>>
+        app.patch('/user/premium/:sid', async (req, res) => {
+            const id = req.params.sid;
+            const filter = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    is_premium: true
+                }
+            }
+            const result = await usersCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        })
+
+        // ====================================== A D M I N ====================================
 
 
 
