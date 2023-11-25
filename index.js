@@ -41,6 +41,8 @@ async function run() {
         // Custom Middlewars--------------------->>>>>
         // Custom Middlewars--------------------->>>>>
 
+
+        // add user during registration and google login------------------------->>>>>
         app.put('/users',async(req,res)=>{
             const data = req.body;
             const query = {email : data.email}
@@ -52,6 +54,14 @@ async function run() {
                 res.send(result)
             }
         })
+
+        // get all users api----------------------------------------------------->>>>>
+        app.get('/users',async(req,res)=>{
+            const result = await usersCollection.find({}).toArray()
+            res.send(result)
+        })
+
+
 
 
 
