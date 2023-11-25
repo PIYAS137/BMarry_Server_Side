@@ -12,6 +12,7 @@ app.use(cors())
 
 // <<<<<<--------------------------------------MONGO DB-------------------------------------->>>>>>
 
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.frg7rqf.mongodb.net/?retryWrites=true&w=majority`;
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -30,7 +31,7 @@ async function run() {
 
         // Database Collections ------------------>>>>>
 
-        const usersCollection = client.db('BMarryDatabase ').collection('usersCollection');
+        const usersCollection = client.db('BMarryDB').collection('usersCollection');
 
         // Database Collections ------------------>>>>>
 
@@ -42,7 +43,14 @@ async function run() {
 
         app.put('/users',async(req,res)=>{
             const data = req.body;
-            console.log(data);
+            const query = {email : data.email}
+            const isExist = await usersCollection.findOne(query);
+            if(isExist){
+                res.send({status : 1})
+            }else{
+                const result = await usersCollection.insertOne(data)
+                res.send(result)
+            }
         })
 
 
