@@ -172,6 +172,27 @@ async function run() {
             res.send(result);
         })
 
+        // get all biodata API * ------------------------------------------------>>>>>>
+        app.get('/biodatas',async(req,res)=>{
+            const result = await biodataCollection.find({}).toArray();
+            res.send(result);
+        })
+
+        // get on bioData details API *------------------------------------------>>>>>>
+        app.get('/oneBio/:sid',async(req,res)=>{
+            const id = req.params.sid;
+            query = {_id : new ObjectId(id)};
+            const result = await biodataCollection.findOne(query);
+            res.send(result)
+        })
+
+        // get self status API ------------------------------------------------->>>>>>
+        app.get('/selfStatus',async(req,res)=>{
+            const query = req.query;
+            const result = await usersCollection.findOne(query);
+            console.log(result);
+            res.send(result);
+        })
 
 
 
