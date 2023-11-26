@@ -165,35 +165,40 @@ async function run() {
         })
 
         // get one person full biodata API * ------------------------------------>>>>>>
-        app.get('/biodata/:email',async(req,res)=> {
+        app.get('/biodata/:email', async (req, res) => {
             const userEmail = req.params.email;
-            const query = {email : userEmail};
+            const query = { email: userEmail };
             const result = await biodataCollection.findOne(query)
             res.send(result);
         })
 
         // get all biodata API * ------------------------------------------------>>>>>>
-        app.get('/biodatas',async(req,res)=>{
+        app.get('/biodatas', async (req, res) => {
             const result = await biodataCollection.find({}).toArray();
             res.send(result);
         })
 
         // get on bioData details API *------------------------------------------>>>>>>
-        app.get('/oneBio/:sid',async(req,res)=>{
+        app.get('/oneBio/:sid', async (req, res) => {
             const id = req.params.sid;
-            query = {_id : new ObjectId(id)};
+            query = { _id: new ObjectId(id) };
             const result = await biodataCollection.findOne(query);
             res.send(result)
         })
 
-        // get self status API ------------------------------------------------->>>>>>
-        app.get('/selfStatus',async(req,res)=>{
+        // get self status API *------------------------------------------------->>>>>>
+        app.get('/selfStatus', async (req, res) => {
             const query = req.query;
             const result = await usersCollection.findOne(query);
-            console.log(result);
             res.send(result);
         })
 
+        // similar detas API *--------------------------------------------------->>>>>>
+        app.get('/similar', async (req, res) => {
+            const query = req.query;
+            const result = await biodataCollection.find(query).toArray();
+            res.send(result);
+        })
 
 
 
