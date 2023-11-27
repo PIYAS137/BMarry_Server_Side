@@ -1,10 +1,11 @@
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const express = require("express")
+require('dotenv').config();
 const cors = require('cors');
+const express = require("express")
 const jwt = require("jsonwebtoken")
 const app = express()
 const port = process.env.PORT || 5022;
-
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 
 // * <== means Users secure api
 // ^ <== meand Admins secure api
@@ -12,7 +13,7 @@ const port = process.env.PORT || 5022;
 
 
 // <<<<<----------------------------------middlewares------------------------------->>>>>
-require('dotenv').config();
+
 app.use(express.json());
 app.use(cors())
 // <<<<<----------------------------------middlewares------------------------------->>>>>
@@ -41,6 +42,7 @@ async function run() {
         const usersCollection = client.db('BMarryDB').collection('usersCollection');
         const biodataCollection = client.db('BMarryDB').collection('bioidataCollection');
         const favouriteCollection = client.db('BMarryDB').collection('favouriteCollection');
+        const paymentCollection = client.db('BMarryDB').collection('paymentCollection');
 
         // Database Collections ------------------>>>>>
 
@@ -116,6 +118,25 @@ async function run() {
             res.send(result)
         })
 
+        // get all request from the user ^ -------------------------------------------->>>>>
+        app.get('/allConReq',verifyToken,verifyAdmin,async(req,res)=>{
+            const result = await paymentCollection.find({}).toArray();
+            res.send(result);
+        })
+
+        // update req status ^ ----------------------------------------------------->>>>>
+        app.patch('/updateReq/:sid', verifyToken, verifyAdmin ,async(req,res)=>{
+            const id = req.params.sid;
+            const query = {_id : new ObjectId(id)};
+            const updatedDoc = {
+                $set : {
+                    status : true
+                }
+            }
+            const result = await paymentCollection.updateOne(query,updatedDoc)
+            res.send(result);
+        })
+
         // ====================================== A D M I N ====================================
 
 
@@ -138,6 +159,52 @@ async function run() {
 
 
 
+
+
+
+
+
+
+
+
+        // ====================================== P A Y M E N T ====================================
+
+        // get payment secret API *
+        app.post('/payment-intent', verifyToken,  async(req,res)=>{
+            const price = req.body.price;
+            const amount = parseInt(price*100);
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount : amount,
+                currency : 'usd',
+                payment_method_types: ["card"]
+            })
+            res.send({
+                clientSecret : paymentIntent
+            })
+        })
+        
+        // post payment data to database *
+        app.post(`/paymentReq`, verifyToken,async(req,res)=>{
+            const data = req.body;
+            const query = {email : data.email}
+            const isExist = await paymentCollection.findOne(query)
+            if(isExist?.requestedBiodataId === data.requestedBiodataId){
+                res.send({message : 'AlreadyAdded'})
+            }else{
+                const result = await paymentCollection.insertOne(data);
+                res.send(result);
+            }
+        })
+
+        // get users contact requests *
+        app.get('/payment/:email', verifyToken,async(req,res)=>{
+            const userEmail = req.params.email;
+            const query = {email : userEmail}
+            const result = await paymentCollection.find(query).toArray()
+            res.send(result);
+        })
+
+        // ====================================== P A Y M E N T ====================================
 
 
 
@@ -248,6 +315,16 @@ async function run() {
             res.send(result);
         })
 
+        // get one person full biodata API by biodata Id * ---------------------->>>>>>
+        app.get('/biodataById/:bid',async(req,res)=>{
+            const bid = req.params.bid;
+            const query = {biodata_id : parseInt(bid) }
+            console.log(query);
+            const result = await biodataCollection.findOne(query)
+            console.log(result);
+            res.send(result);
+        })
+
         // get all biodata API ------------------------------------------------>>>>>>
         app.get('/biodatas', async (req, res) => {
             const result = await biodataCollection.find({}).toArray();
@@ -337,6 +414,14 @@ async function run() {
                 const matchingDocs = await biodataCollection.find({ _id: { $in: favIds } }).toArray();
                 res.send(matchingDocs);
             }
+        })
+
+        // delete payment doc * ----------------------------------------------->>>>>>
+        app.delete('/deleteReq/:bid',async(req,res)=>{
+            const bid = req.params.bid;
+            const query = {_id : new ObjectId(bid)};
+            const result = await paymentCollection.deleteOne(query);
+            res.send(result);
         })
 
 
