@@ -44,6 +44,7 @@ async function run() {
         const favouriteCollection = client.db('BMarryDB').collection('favouriteCollection');
         const paymentCollection = client.db('BMarryDB').collection('paymentCollection');
         const premiumCollection = client.db('BMarryDB').collection('premiumCollection');
+        const gotMarriedCollection = client.db('BMarryDB').collection('gotMarriedCollection');
 
         // Database Collections ------------------>>>>>
 
@@ -145,7 +146,7 @@ async function run() {
         })
 
         // make user premium API ^ -------------------------------------------------->>>>>
-        app.patch('/premium/:email', async (req, res) => {
+        app.patch('/premium/:email', verifyToken,verifyAdmin , async (req, res) => {
             const userEmail = req.params.email;
             const query = { email: userEmail };
             const updatedDoc = {
@@ -159,6 +160,12 @@ async function run() {
                 const finalResutl = await premiumCollection.deleteOne(filter);
                 res.send(finalResutl)
             }
+        })
+
+        // get all success story ^ -------------------------------------------------->>>>>
+        app.get('/getSuccess',verifyToken,verifyAdmin,async(req,res)=>{
+            const result = await gotMarriedCollection.find({}).toArray();
+            res.send(result);
         })
 
         // ====================================== A D M I N ====================================
@@ -441,7 +448,7 @@ async function run() {
         })
 
         // delete payment doc * ----------------------------------------------->>>>>>
-        app.delete('/deleteReq/:bid', async (req, res) => {
+        app.delete('/deleteReq/:bid', verifyToken, async (req, res) => {
             const bid = req.params.bid;
             const query = { _id: new ObjectId(bid) };
             const result = await paymentCollection.deleteOne(query);
@@ -462,6 +469,43 @@ async function run() {
 
         })
 
+        // success story post API * ------------------------------------------->>>>>>
+        app.post('/success',verifyToken,async(req,res)=>{
+            const data = req.body;
+            data.partnerBiodataId = parseInt(data.partnerBiodataId);
+            console.log(data);
+            
+            const query = { biodata_id : data.partnerBiodataId};
+            const isPartnerExist = await biodataCollection.findOne(query);
+            if(!isPartnerExist){
+                return res.send({message : "PartnerNotFount"})
+            }
+            const finalDoc = {
+                self_biodata_id : data.selfBiodataId,
+                partner_biodata_id : data.partnerBiodataId,
+                couple_image_link : data.coupleImageLink,
+                success_story : data.successStory,
+                self_name : data.selfName,
+                partner_name : isPartnerExist?.name,
+                self_email : data.selfEmail,
+                rating : data.rating,
+                marriage_date : data.marriageDate
+            }
+            const filter = {self_email : data.selfEmail }
+            const isAlredyExist = await gotMarriedCollection.findOne(filter);
+            if(isAlredyExist){
+                return res.send({message : 'AlreadyAdded'})
+            }
+            const finalResutl = await gotMarriedCollection.insertOne(finalDoc);
+            res.send(finalResutl);
+
+        })
+
+        // get 4 recent data of married couple  ------------------------------->>>>>>
+        app.get('/filterSuccess',async(req,res)=>{
+            const result = await gotMarriedCollection.find({}).sort({marriage_date : -1}).limit(4).toArray();
+            res.send(result);
+        })
 
 
 
