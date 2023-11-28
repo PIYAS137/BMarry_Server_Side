@@ -84,7 +84,7 @@ async function run() {
 
         // ====================================== A D M I N ====================================
 
-        // make admin API ^ -------------------------------------------------------->>>>>
+        // make admin API ^ ---------------------------------------------------------->>>>>
         app.patch('/user/admin/:sid', verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.sid;
             const filter = { _id: new ObjectId(id) };
@@ -110,15 +110,21 @@ async function run() {
             res.send(result);
         })
 
-        // get all users api ^ ----------------------------------------------------->>>>>
-        app.get('/users/:email', verifyToken, verifyAdmin, async (req, res) => {
-            const userEmail = req.params.email;
-            if (userEmail !== req.decodedUser.email) {
-                return res.status(403).send({ message: 'Forbidden Access' });
+        // get all users api ^ ------------------------------------------------------->>>>>
+        app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+            const userEmail = req.query.email;
+            const text = req.query.text;
+            if (text !== "") {
+                const result = await usersCollection.find({ name: { $regex: text, $options: 'i' } }).toArray();
+                res.send(result);
+            } else {
+                if (userEmail !== req.decodedUser.email) {
+                    return res.status(403).send({ message: 'Forbidden Access' });
+                }
+                const result = await usersCollection.find({}).toArray();
+                res.send(result);
             }
-            const result = await usersCollection.find({}).toArray()
-            res.send(result)
-        })
+        });
 
         // get all request from the user ^ ------------------------------------------->>>>>
         app.get('/allConReq', verifyToken, verifyAdmin, async (req, res) => {
@@ -146,7 +152,7 @@ async function run() {
         })
 
         // make user premium API ^ -------------------------------------------------->>>>>
-        app.patch('/premium/:email', verifyToken,verifyAdmin , async (req, res) => {
+        app.patch('/premium/:email', verifyToken, verifyAdmin, async (req, res) => {
             const userEmail = req.params.email;
             const query = { email: userEmail };
             const updatedDoc = {
@@ -163,7 +169,7 @@ async function run() {
         })
 
         // get all success story ^ -------------------------------------------------->>>>>
-        app.get('/getSuccess',verifyToken,verifyAdmin,async(req,res)=>{
+        app.get('/getSuccess', verifyToken, verifyAdmin, async (req, res) => {
             const result = await gotMarriedCollection.find({}).toArray();
             res.send(result);
         })
@@ -350,15 +356,15 @@ async function run() {
         app.get('/biodataById/:bid', async (req, res) => {
             const bid = req.params.bid;
             const query = { biodata_id: parseInt(bid) }
-            console.log(query);
             const result = await biodataCollection.findOne(query)
-            console.log(result);
             res.send(result);
         })
 
         // get all biodata API ------------------------------------------------>>>>>>
         app.get('/biodatas', async (req, res) => {
-            const result = await biodataCollection.find({}).toArray();
+            const page = parseInt(req.query.page);
+            const size = parseInt(req.query.size);
+            const result = await biodataCollection.find().skip(page * size).limit(size).toArray();
             res.send(result);
         })
 
@@ -426,8 +432,6 @@ async function run() {
             const query = { email: userEmail };
             const existData = await favouriteCollection.findOne(query);
             const arr = existData.fav.filter(one => !(one.equals(new ObjectId(comingId))));
-            console.log(new ObjectId(comingId));
-            console.log(arr);
             const updatedDoc = {
                 $pull: { fav: new ObjectId(comingId) }
             }
@@ -470,31 +474,30 @@ async function run() {
         })
 
         // success story post API * ------------------------------------------->>>>>>
-        app.post('/success',verifyToken,async(req,res)=>{
+        app.post('/success', verifyToken, async (req, res) => {
             const data = req.body;
             data.partnerBiodataId = parseInt(data.partnerBiodataId);
-            console.log(data);
-            
-            const query = { biodata_id : data.partnerBiodataId};
+
+            const query = { biodata_id: data.partnerBiodataId };
             const isPartnerExist = await biodataCollection.findOne(query);
-            if(!isPartnerExist){
-                return res.send({message : "PartnerNotFount"})
+            if (!isPartnerExist) {
+                return res.send({ message: "PartnerNotFount" })
             }
             const finalDoc = {
-                self_biodata_id : data.selfBiodataId,
-                partner_biodata_id : data.partnerBiodataId,
-                couple_image_link : data.coupleImageLink,
-                success_story : data.successStory,
-                self_name : data.selfName,
-                partner_name : isPartnerExist?.name,
-                self_email : data.selfEmail,
-                rating : data.rating,
-                marriage_date : data.marriageDate
+                self_biodata_id: data.selfBiodataId,
+                partner_biodata_id: data.partnerBiodataId,
+                couple_image_link: data.coupleImageLink,
+                success_story: data.successStory,
+                self_name: data.selfName,
+                partner_name: isPartnerExist?.name,
+                self_email: data.selfEmail,
+                rating: data.rating,
+                marriage_date: data.marriageDate
             }
-            const filter = {self_email : data.selfEmail }
+            const filter = { self_email: data.selfEmail }
             const isAlredyExist = await gotMarriedCollection.findOne(filter);
-            if(isAlredyExist){
-                return res.send({message : 'AlreadyAdded'})
+            if (isAlredyExist) {
+                return res.send({ message: 'AlreadyAdded' })
             }
             const finalResutl = await gotMarriedCollection.insertOne(finalDoc);
             res.send(finalResutl);
@@ -502,11 +505,55 @@ async function run() {
         })
 
         // get 4 recent data of married couple  ------------------------------->>>>>>
-        app.get('/filterSuccess',async(req,res)=>{
-            const result = await gotMarriedCollection.find({}).sort({marriage_date : -1}).limit(4).toArray();
+        app.get('/filterSuccess', async (req, res) => {
+            const result = await gotMarriedCollection.find({}).sort({ marriage_date: -1 }).limit(4).toArray();
             res.send(result);
         })
 
+        // get premium 6 card ------------------------------------------------->>>>>>
+        app.get('/premiumSix', async (req, res) => {
+            const query = { is_premium: true };
+            const premiumSix = await usersCollection.find(query).limit(6).toArray();
+            const premiumIds = premiumSix.map(one => one.email);
+            const premiumDatas = await biodataCollection.find({ email: { $in: premiumIds } }).toArray();
+            res.send(premiumDatas)
+
+        })
+
+        // user summary for user dashboard * ---------------------------------->>>>>>
+        app.get('/userSummary/:email', verifyToken, async (req, res) => {
+            const userEmail = req.params.email;
+            const query = { email: userEmail };
+            const result = await paymentCollection.find(query).toArray();
+            const finalResult = {
+                totalSpent: result.length * 500,
+                totalReq: result.length,
+            }
+            res.send(finalResult);
+        })
+
+        // admin statistics API ^ --------------------------------------------------->>>>>
+        app.get('/getStatistics', async (req, res) => {
+            const MaleQuery = { gender: 'male' };
+            const FemaleQuery = { gender: 'female' };
+            const premiumQuery = { is_premium: true };
+            const maleCount = await biodataCollection.find(MaleQuery).toArray();
+            const femaleCount = await biodataCollection.find(FemaleQuery).toArray();
+            const totalBiodataCount = await biodataCollection.find({}).toArray();
+            const premiumCount = await usersCollection.find(premiumQuery).toArray();
+            const totalRevenue = await paymentCollection.find({}).toArray();
+            const successStory = await gotMarriedCollection.find({}).toArray();
+            const newInfo = {
+                male_biodata_count: maleCount.length,
+                female_biodata_count: femaleCount.length,
+                total_biodata_count: totalBiodataCount.length,
+                premium_biodata_count: premiumCount.length,
+                total_revenue: totalRevenue.length * 500,
+                success_story: successStory.length
+            }
+            res.send(newInfo)
+
+        })
 
 
 
