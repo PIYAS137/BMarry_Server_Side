@@ -34,7 +34,7 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
 
         // Database Collections ------------------>>>>>
@@ -515,9 +515,8 @@ async function run() {
             const query = { is_premium: true };
             const premiumSix = await usersCollection.find(query).limit(6).toArray();
             const premiumIds = premiumSix.map(one => one.email);
-            const premiumDatas = await biodataCollection.find({ email: { $in: premiumIds } }).toArray();
+            const premiumDatas = await biodataCollection.find({ email: { $in: premiumIds } }).sort({ age: 1 }).toArray();
             res.send(premiumDatas)
-
         })
 
         // user summary for user dashboard * ---------------------------------->>>>>>
@@ -575,8 +574,8 @@ async function run() {
 
 
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
@@ -588,7 +587,7 @@ run().catch(console.dir);
 
 
 app.get('/', async (req, res) => {
-    res.send("Server is coming soon....!!!")
+    res.send("BMarry Server is running....!!!")
 })
 
 app.listen(port, () => {
